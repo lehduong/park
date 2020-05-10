@@ -1,5 +1,6 @@
 # Format follows OpenAI gym https://gym.openai.com
 
+import copy
 import re
 import pkg_resources
 from park import logger
@@ -23,6 +24,7 @@ class EnvSpec(object):
 
     def __init__(self, env_id, entry_point=None):
         self.env_id = env_id
+        self.id = env_id
         self._entry_point = entry_point
 
     def make(self):
@@ -34,7 +36,8 @@ class EnvSpec(object):
         else:
             cls = load(self._entry_point)
             env = cls()
-
+        spec = copy.deepcopy(self)
+        env.spec = spec
         return env
 
 

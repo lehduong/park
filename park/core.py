@@ -1,8 +1,9 @@
 from park import logger
+from gym import Env as BaseEnv
 
 
 # Env-related abstractions
-class Env(object):
+class Env(BaseEnv):
     """
     The main park class. The interface follows OpenAI gym
     https://gym.openai.com, which encapsulates an environment with
@@ -64,7 +65,6 @@ class Env(object):
         """
         logger.warn('Could not seed environment ' + self.metadata['env.name'])
         return
-
 
 # Real system environment abstractions
 class SysEnv(object):
