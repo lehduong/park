@@ -119,13 +119,7 @@ class LoadBalanceEnv(core.Env):
         if self.incoming_job is None:
             obs_arr.append(0)
         else:
-            if self.incoming_job.size > self.obs_high[-1]:
-                logger.warn('Incoming job at time ' + str(self.wall_time.curr_time) +
-                              ' has size ' + str(self.incoming_job.size) +
-                              ' larger than obs_high ' + str(self.obs_high[-1]))
-                obs_arr.append(self.obs_high[-1])
-            else:
-                obs_arr.append(self.incoming_job.size)
+            obs_arr.append(self.incoming_job.size)
 
         obs_arr = np.array(obs_arr)
         assert self.observation_space.contains(obs_arr)
