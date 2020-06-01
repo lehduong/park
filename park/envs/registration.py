@@ -27,15 +27,15 @@ class EnvSpec(object):
         self.id = env_id
         self._entry_point = entry_point
 
-    def make(self):
+    def make(self, **kwargs):
         """Instantiates an instance of the environment with appropriate kwargs"""
         if self._entry_point is None:
             raise error.Error('Environment ' + self.env_id + ' needs to specify an entry point')
         elif callable(self._entry_point):
-            env = self._entry_point()
+            env = self._entry_point(**kwargs)
         else:
             cls = load(self._entry_point)
-            env = cls()
+            env = cls(**kwargs)
         spec = copy.deepcopy(self)
         env.spec = spec
         return env
@@ -50,9 +50,9 @@ class EnvRegistry(object):
     def __init__(self):
         self.env_specs = {}
 
-    def make(self, env_id):
+    def make(self, env_id, **kwargs):
         spec = self.spec(env_id)
-        env = spec.make()
+        env = spec.make(**kwargs)
         return env
 
     def all(self):
@@ -75,8 +75,8 @@ registry = EnvRegistry()
 def register(env_id, entry_point):
     return registry.register(env_id, entry_point)
 
-def make(env_id):
-    return registry.make(env_id)
+def make(env_id, **kwargs):
+    return registry.make(env_id, **kwargs)
 
 def spec(env_id):
     return registry.spec(env_id)
