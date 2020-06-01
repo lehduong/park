@@ -17,6 +17,9 @@ class LoadBalanceEnv(core.Env):
     Jobs arrive according to a Poisson process and the job size
     distributes according to a Pareto distribution.
 
+    :param num_stream_jobs: int - number of jobs arriving to the cluster
+    :param service_rate: list of float - the processing speed of each server in cluster 
+
     * STATE *
         Current Load (total work waiting in the queue +
         remaining work currently being processed (if any) among n
@@ -48,7 +51,7 @@ class LoadBalanceEnv(core.Env):
         DJ Daley.
         Stochastic Processes and their Applications, 25:301–308, 1987.
     """
-    def __init__(self):
+    def __init__(self, num_stream_jobs=1000, service_rates=[0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95, 1.05]):
         # observation and action space
         self.setup_space()
         # random seed
@@ -58,9 +61,9 @@ class LoadBalanceEnv(core.Env):
         # uses priority queue
         self.timeline = Timeline()
         # total number of streaming jobs (can be very large)
-        self.num_stream_jobs = config.num_stream_jobs
+        self.num_stream_jobs = num_stream_jobs
         # servers
-        self.servers = self.initialize_servers(config.service_rates)
+        self.servers = self.initialize_servers(service_rates)
         # current incoming job to schedule
         self.incoming_job = None
         # finished jobs (for logging at the end)
@@ -115,7 +118,6 @@ class LoadBalanceEnv(core.Env):
             obs_arr.append(self.incoming_job.size)
 
         obs_arr = np.array(obs_arr)
-        assert self.observation_space.contains(obs_arr)
 
         return obs_arr
 
