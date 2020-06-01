@@ -115,7 +115,6 @@ class LoadBalanceEnv(core.Env):
             obs_arr.append(self.incoming_job.size)
 
         obs_arr = np.array(obs_arr)
-        assert self.observation_space.contains(obs_arr)
 
         return obs_arr
 
