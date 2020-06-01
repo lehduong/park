@@ -51,7 +51,6 @@ class EnvRegistry(object):
         self.env_specs = {}
 
     def make(self, env_id):
-        logger.info('Making new env ' + env_id)
         spec = self.spec(env_id)
         env = spec.make()
         return env
