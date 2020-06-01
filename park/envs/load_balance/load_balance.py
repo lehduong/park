@@ -106,13 +106,6 @@ class LoadBalanceEnv(core.Env):
             if server.curr_job is not None:
                 # remaining work currently being processed
                 load += server.curr_job.finish_time - self.wall_time.curr_time
-            # if the load is larger than observation threshold
-            # report a warning
-            if load > self.obs_high[server.server_id]:
-                logger.warn('Server ' + str(server.server_id) + ' at time ' +
-                             str(self.wall_time.curr_time) + ' has load ' + str(load) +
-                             ' larger than obs_high ' + str(self.obs_high[server.server_id]))
-                load = self.obs_high[server.server_id]
             obs_arr.append(load)
 
         # incoming job size
