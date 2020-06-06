@@ -52,8 +52,6 @@ class LoadBalanceEnv(core.Env):
         Stochastic Processes and their Applications, 25:301–308, 1987.
     """
     def __init__(self, num_stream_jobs=1000, service_rates=[0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95, 1.05]):
-        # observation and action space
-        self.setup_space()
         # random seed
         self.seed(config.seed)
         # global timer
@@ -62,12 +60,14 @@ class LoadBalanceEnv(core.Env):
         self.timeline = Timeline()
         # total number of streaming jobs (can be very large)
         self.num_stream_jobs = num_stream_jobs
-        # servers
-        self.servers = self.initialize_servers(service_rates)
         # current incoming job to schedule
         self.incoming_job = None
         # finished jobs (for logging at the end)
         self.finished_jobs = []
+        # servers
+        self.servers = self.initialize_servers(service_rates)
+        # observation and action space
+        self.setup_space()
         # reset environment (generate new jobs)
         self.reset()
 
@@ -95,7 +95,7 @@ class LoadBalanceEnv(core.Env):
 
     def initialize_servers(self, service_rates):
         servers = []
-        for server_id in range(config.num_servers):
+        for server_id in range(len(service_rates)):
             server = Server(server_id, service_rates[server_id], self.wall_time)
             servers.append(server)
         return servers
@@ -142,11 +142,11 @@ class LoadBalanceEnv(core.Env):
         # The boundary of the space may change if the dynamics is changed
         # a warning message will show up every time e.g., the observation falls
         # out of the observation space
-        self.obs_low = np.array([0] * (config.num_servers + 1))
-        self.obs_high = np.array([config.load_balance_obs_high] * (config.num_servers + 1))
+        self.obs_low = np.array([0] * (len(self.servers) + 1))
+        self.obs_high = np.array([config.load_balance_obs_high] * (len(self.servers) + 1))
         self.observation_space = spaces.Box(
             low=self.obs_low, high=self.obs_high, dtype=np.float32)
-        self.action_space = spaces.Discrete(config.num_servers)
+        self.action_space = spaces.Discrete(len(self.servers))
 
     def step(self, action):
 
