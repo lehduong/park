@@ -8,6 +8,7 @@ from park.envs.load_balance.job_generator import generate_job, generate_jobs
 from park.envs.load_balance.server import Server
 from park.envs.load_balance.timeline import Timeline
 from park.envs.load_balance.wall_time import WallTime
+from park.envs.load_balance.reward_calculators import RewardCalculator
 
 
 class LoadBalanceEnv(core.Env):
@@ -19,6 +20,8 @@ class LoadBalanceEnv(core.Env):
 
     :param num_stream_jobs: int - number of jobs arriving to the cluster
     :param service_rate: list of float - the processing speed of each server in cluster 
+    :param objective: str - name of objective that we want the scheduler to optimize \
+        supported objective: makespan, utilization, waitingTime, idleTime 
 
     * STATE *
         Current Load (total work waiting in the queue +
@@ -40,18 +43,24 @@ class LoadBalanceEnv(core.Env):
         time 5. Then the reward is - (1 * 1 + 1 * 2.4 + 2 * 5).
         Thus, the sum of the rewards would be negative of total
         (waiting + processing) time for all jobs.
-    
+
     * REFERENCE *
         Figure 1a, Section 6.2 and Appendix J
         Variance Reduction for Reinforcement Learning in Input-Driven Environments. 
         H Mao, SB Venkatakrishnan, M Schwarzkopf, M Alizadeh.
         https://openreview.net/forum?id=Hyg1G2AqtQ
-    
+
         Certain optimality properties of the first-come first-served discipline for g/g/s queues.
         DJ Daley.
         Stochastic Processes and their Applications, 25:301–308, 1987.
     """
-    def __init__(self, num_stream_jobs=1000, service_rates=[0.15, 0.25, 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 0.95, 1.05]):
+
+    def __init__(self,
+                 num_stream_jobs=1000,
+                 service_rates=[0.15, 0.25, 0.35, 0.45,
+                                0.55, 0.65, 0.75, 0.85, 0.95, 1.05],
+                 objective='completionTime'
+                 ):
         # random seed
         self.seed(config.seed)
         # global timer
@@ -70,6 +79,8 @@ class LoadBalanceEnv(core.Env):
         self.setup_space()
         # reset environment (generate new jobs)
         self.reset()
+        # select objective of scheduler
+        self.reward_calculator = RewardCalculator(objective, self)
 
     def generate_job(self):
         if self.num_stream_jobs_left > 0:
@@ -96,7 +107,8 @@ class LoadBalanceEnv(core.Env):
     def initialize_servers(self, service_rates):
         servers = []
         for server_id in range(len(service_rates)):
-            server = Server(server_id, service_rates[server_id], self.wall_time)
+            server = Server(
+                server_id, service_rates[server_id], self.wall_time)
             servers.append(server)
         return servers
 
@@ -143,7 +155,8 @@ class LoadBalanceEnv(core.Env):
         # a warning message will show up every time e.g., the observation falls
         # out of the observation space
         self.obs_low = np.array([0] * (len(self.servers) + 1))
-        self.obs_high = np.array([config.load_balance_obs_high] * (len(self.servers) + 1))
+        self.obs_high = np.array(
+            [config.load_balance_obs_high] * (len(self.servers) + 1))
         self.observation_space = spaces.Box(
             low=self.obs_low, high=self.obs_high, dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.servers))
@@ -152,6 +165,9 @@ class LoadBalanceEnv(core.Env):
 
         # 0 <= action < num_servers
         assert self.action_space.contains(action)
+
+        # compute reward
+        reward = self.reward_calculator.get_reward(action)
 
         # schedule job to server
         self.servers[action].schedule(self.incoming_job)
@@ -165,9 +181,6 @@ class LoadBalanceEnv(core.Env):
         # generate next job
         self.generate_job()
 
-        # set to compute reward from this time point
-        reward = 0
-
         while len(self.timeline) > 0:
 
             new_time, obj = self.timeline.pop()
@@ -177,9 +190,9 @@ class LoadBalanceEnv(core.Env):
             for server in self.servers:
                 if server.curr_job is not None:
                     assert server.curr_job.finish_time >= \
-                           self.wall_time.curr_time  # curr job should be valid
+                        self.wall_time.curr_time  # curr job should be valid
                     num_active_jobs += 1
-            reward -= (new_time - self.wall_time.curr_time) * num_active_jobs
+            #reward -= (new_time - self.wall_time.curr_time) * num_active_jobs
 
             # tick time
             self.wall_time.update(new_time)
@@ -198,7 +211,7 @@ class LoadBalanceEnv(core.Env):
                     # don't store infinite streaming
                     # TODO: stream the complete job to some file
                     if len(self.finished_jobs) > 0:
-                        self.finished_jobs[-1] +=1
+                        self.finished_jobs[-1] += 1
                     else:
                         self.finished_jobs = [1]
                 if job.server.curr_job == job:
@@ -212,7 +225,7 @@ class LoadBalanceEnv(core.Env):
                 print("illegal event type")
                 exit(1)
 
-        done = ((len(self.timeline) == 0) and \
-               self.incoming_job is None)
+        done = ((len(self.timeline) == 0) and
+                self.incoming_job is None)
 
         return self.observe(), reward, done, {'curr_time': self.wall_time.curr_time}
