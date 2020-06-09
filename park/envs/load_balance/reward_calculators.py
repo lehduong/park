@@ -56,7 +56,7 @@ class CompletionTimeReward(WaitingTimeReward):
     """
 
     def get_reward(self, action):
-        wait_time = super().get_reward(action)
+        wait_time = - super().get_reward(action)
         complete_time = wait_time + self.env.incoming_job.size / \
             self.env.servers[action].service_rate
 
@@ -73,9 +73,31 @@ class MakespanReward(BaseRewardCalculator):
         # TODO: The reward seem to be faulty because in the last state \
         # though a smaller makespan has higher reward than the longer one \
         # the final reward is smaller than default scarsity reward (i.e. 0)
-        # done
-        if self.env.incoming_job is None:
-            return -1.0 * self.env.wall_time.curr_time
+        if self.env.num_stream_jobs_left == 0:
+            # this is the last job arrival event
+            # thus, we have to compute the time we would complete all job
+            state = self.env.observe()
+            server_load, job_size = state[:-1], state[-1]
+
+            # load of queued jobs of each server
+            queue_load = [sum([job.size for job in server.queue])
+                          for server in self.env.servers]
+
+            # server load in total
+            server_load = [cur + wait for cur,
+                           wait in zip(server_load, queue_load)]
+
+            job_duration = job_size / self.env.servers[action].service_rate
+
+            # server load after taking given action
+            server_load[action] = server_load[action] + job_duration
+
+            print(server_load)
+
+            # completion time of all jobs
+            finish_time = max(server_load) + self.env.wall_time.curr_time
+
+            return -1.0 * finish_time
         else:
             return 0
 
