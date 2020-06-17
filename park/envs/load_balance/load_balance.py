@@ -160,9 +160,9 @@ class LoadBalanceEnv(core.Env):
         # The boundary of the space may change if the dynamics is changed
         # a warning message will show up every time e.g., the observation falls
         # out of the observation space
-        self.obs_low = np.array([0] * (len(self.servers) + 1))
+        self.obs_low = np.array([0] * (len(self.servers) + 2))
         self.obs_high = np.array(
-            [config.load_balance_obs_high] * (len(self.servers) + 1))
+            [config.load_balance_obs_high] * (len(self.servers) + 2))
         self.observation_space = spaces.Box(
             low=self.obs_low, high=self.obs_high, dtype=np.float32)
         self.action_space = spaces.Discrete(len(self.servers))
