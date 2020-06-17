@@ -73,6 +73,8 @@ class LoadBalanceEnv(core.Env):
         self.incoming_job = None
         # finished jobs (for logging at the end)
         self.finished_jobs = []
+        # time stamp of last event
+        self.last_time = 0
         # servers
         self.servers = self.initialize_servers(service_rates)
         # observation and action space
@@ -129,6 +131,9 @@ class LoadBalanceEnv(core.Env):
         else:
             obs_arr.append(self.incoming_job.size)
 
+        # time since last event
+        obs_arr.append(self.wall_time.curr_time - self.last_time)
+
         obs_arr = np.array(obs_arr)
 
         return obs_arr
@@ -137,6 +142,7 @@ class LoadBalanceEnv(core.Env):
         for server in self.servers:
             server.reset()
         self.wall_time.reset()
+        self.last_time = 0
         self.timeline.reset()
         self.num_stream_jobs_left = self.num_stream_jobs
         assert self.num_stream_jobs_left > 0
@@ -162,16 +168,21 @@ class LoadBalanceEnv(core.Env):
         self.action_space = spaces.Discrete(len(self.servers))
 
     def step(self, action):
-
         # 0 <= action < num_servers
         assert self.action_space.contains(action)
+
+        # current time before update new event
+        # used to compute time interval between upcoming event and last event
+        self.last_time = self.wall_time.curr_time
 
         # compute reward
         reward = self.reward_calculator.get_reward(action)
 
         # schedule job to server
         self.servers[action].schedule(self.incoming_job)
+
         running_job = self.servers[action].process()
+
         if running_job is not None:
             self.timeline.push(running_job.finish_time, running_job)
 
