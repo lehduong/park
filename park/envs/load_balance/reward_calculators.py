@@ -29,23 +29,10 @@ class WaitingTimeReward(BaseRewardCalculator):
     """
 
     def get_reward(self, action):
-        assigned_server = self.env.servers[action]
-        curr_job = assigned_server.curr_job
-        service_rate = assigned_server.service_rate
-
         # compute waiting time for processing job
-        if curr_job is None or \
-                curr_job.finish_time < self.env.wall_time.curr_time:
-            wait_curr_job = 0
-        else:
-            wait_curr_job = curr_job.finish_time - self.env.wall_time.curr_time
+        waitTime = self.env.observe()[action]
 
-        # compute waiting time for jobs in queue
-        wait_queued_job = reduce(lambda acc, elem: acc + elem.size / service_rate,
-                                 assigned_server.queue,
-                                 0)
-
-        return -1.0 * (wait_curr_job + wait_queued_job)
+        return -1.0 * waitTime
 
 
 class CompletionTimeReward(WaitingTimeReward):
