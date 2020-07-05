@@ -176,7 +176,8 @@ class LoadBalanceEnv(core.Env):
         self.last_time = self.wall_time.curr_time
 
         # compute reward
-        reward = self.reward_calculator.get_reward(action)
+        # reward = self.reward_calculator.get_reward(action)
+        reward = 0
 
         # schedule job to server
         self.servers[action].schedule(self.incoming_job)
@@ -203,7 +204,7 @@ class LoadBalanceEnv(core.Env):
                     assert server.curr_job.finish_time >= \
                         self.wall_time.curr_time  # curr job should be valid
                     num_active_jobs += 1
-            #reward -= (new_time - self.wall_time.curr_time) * num_active_jobs
+            reward -= (new_time - self.wall_time.curr_time) * num_active_jobs
 
             # tick time
             self.wall_time.update(new_time)
